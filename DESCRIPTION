@@ -1,7 +1,7 @@
 Package: assertr
 Type: Package
 Title: Assertive Programming for R Analysis Pipelines
-Version: 0.4
+Version: 0.4.1
 Authors@R: person("Tony", "Fischetti", email="tony.fischetti@gmail.com",
   role = c("aut", "cre"))
 Maintainer: Tony Fischetti <tony.fischetti@gmail.com>
@@ -17,8 +17,8 @@ LazyData: TRUE
 Imports: dplyr,
 Suggests: knitr, testthat, magrittr
 VignetteBuilder: knitr
-Packaged: 2015-03-21 19:02:19 UTC; tonyfischetti
+Packaged: 2015-03-24 03:17:54 UTC; tonyfischetti
 Author: Tony Fischetti [aut, cre]
 NeedsCompilation: no
 Repository: CRAN
-Date/Publication: 2015-03-22 08:03:30
+Date/Publication: 2015-03-24 07:21:40
