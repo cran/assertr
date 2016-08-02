@@ -3,9 +3,9 @@ assertr
 
 ![assertr logo](http://statethatiamin.onlythisrose.com/assertrlogo.png)
 
-[![Build Status](https://travis-ci.org/tonyfischetti/assertr.svg?branch=master)](https://travis-ci.org/tonyfischetti/assertr)
-[![](http://www.r-pkg.org/badges/version/assertr)](http://cran.rstudio.com/web/packages/assertr/index.html)
-[![CRAN RStudio mirror downloads](http://cranlogs.r-pkg.org/badges/assertr)](http://cran.r-project.org/web/packages/assertr/index.html)
+[![Build Status](https://travis-ci.org/ropenscilabs/assertr.svg?branch=master)](https://travis-ci.org/ropenscilabs/assertr)
+[![](http://www.r-pkg.org/badges/version/assertr)](https://cran.r-project.org/package=assertr)
+[![CRAN RStudio mirror downloads](http://cranlogs.r-pkg.org/badges/assertr)](https://cran.r-project.org/package=assertr)
 
 ### What is it?
 The assertr package supplies a suite of functions designed to verify
@@ -18,14 +18,14 @@ mechanism but the examples in this README use them for clarity.
 ### Installation
 
 You can install the latest version on CRAN like this
-
+  
     install.packages("assertr")
 
 or you can install the bleeding-edge development version like this:
-
+```{r}
     install.packages("devtools")
-    devtools::install_github("tonyfischetti/assertr")
-
+    devtools::install_github("ropenscilabs/assertr")
+```
 ### What does it look like?
 This package offers five assertion functions, `assert`, `verify`,
 `insist`, `assert_rows`, and `insist_rows`, that are designed to be used
@@ -49,7 +49,7 @@ all the distances (for outlier detection)
 
 This could be written (in order) using `assertr` like this:
 
-
+```{r}
     mtcars %>%
       verify(nrow(.) > 10) %>%
       verify(mpg > 0) %>%
@@ -59,7 +59,7 @@ This could be written (in order) using `assertr` like this:
       insist_rows(maha_dist, within_n_mads(10), everything()) %>%
       group_by(cyl) %>%
       summarise(avg.mpg=mean(mpg))
-
+```
 
 If any of these assertions were violated, an error would have been raised
 and the pipeline would have been terminated early.
@@ -145,7 +145,9 @@ evaluation. The counterpart functions are postfixed by "_" (an underscore).
 ### More info
 
 For more info, check out the `assertr` vignette
-
+```{r}
     > vignette("assertr")
-
+```
 Or [read it here](http://cran.r-project.org/web/packages/assertr/vignettes/assertr.html)
+
+[![ropensci\_footer](http://ropensci.org/public_images/github_footer.png)](http://ropensci.org)
