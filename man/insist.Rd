@@ -5,10 +5,11 @@
 \alias{insist_}
 \title{Raises error if dynamically created predicate is FALSE in any columns selected}
 \usage{
-insist(data, predicate_generator, ..., error_fun = assertr_stop)
+insist(data, predicate_generator, ..., success_fun = success_continue,
+  error_fun = error_stop)
 
-insist_(data, predicate_generator, ..., .dots, error_fun = assertr_stop,
-  .nameofpred = "")
+insist_(data, predicate_generator, ..., .dots, success_fun = success_continue,
+  error_fun = error_stop)
 }
 \arguments{
 \item{data}{A data frame}
@@ -22,17 +23,19 @@ every element in the column vectors selected}
 Uses dplyr's \code{select} to select
 columns from data.}
 
-\item{error_fun}{Function to call if assertion fails. Takes one error
-string. Uses \code{stop} by default}
+\item{success_fun}{Function to call if assertion passes. Defaults to
+returning \code{data}.}
+
+\item{error_fun}{Function to call if assertion fails. Defaults to printing
+a summary of all errors.}
 
 \item{.dots}{Use insist_() to select columns using standard evaluation.}
-
-\item{.nameofpred}{Text representation of predicate for printing in case
-of assertion violation. Will automatically be retrieved if left
-blank (default)}
 }
 \value{
-data if dynamically created predicate assertion is TRUE. error if not.
+By default, the \code{data} is returned if dynamically created
+        predicate assertion is TRUE and and error is thrown if not. If a
+        non-default \code{success_fun} or \code{error_fun} is used, the
+        return values of these function will be returned.
 }
 \description{
 Meant for use in a data analysis pipeline, this function applies a predicate
@@ -42,6 +45,10 @@ predicate applications yield FALSE, this function will raise an error,
 effectively terminating the pipeline early. If there are no FALSES, this
 function will just return the data that it was supplied for further use in
 later parts of the pipeline.
+}
+\details{
+For examples of possible choices for the \code{success_fun} and
+\code{error_fun} parameters, run \code{help("success_and_error_functions")}
 }
 \note{
 See \code{vignette("assertr")} for how to use this in context
@@ -72,4 +79,3 @@ iris \%>\%
 \code{\link{assert}} \code{\link{verify}} \code{\link{insist_rows}}
          \code{\link{assert_rows}}
 }
-

@@ -14,13 +14,16 @@
 #' It will convert any categorical variables in the data frame into numerics
 #' as long as they are factors. For example, in order for a character
 #' column to be used as a component in the distance calculations, it must
-#' either be a factor, or converted to a factor.
+#' either be a factor, or converted to a factor by using the
+#' \code{stringsAsFactors} parameter.
 #'
 #' @param data A data frame
 #' @param keep.NA Ensure that every row with missing data remains NA in
 #'                 the output? TRUE by default.
 #' @param robust Attempt to compute mahalanobis distance based on
 #'         robust covariance matrix? FALSE by default
+#' @param stringsAsFactors Convert non-factor string columns into factors?
+#'                         FALSE by default
 #'
 #' @return A vector of observation-wise mahalanobis distances.
 #' @seealso \code{\link{insist_rows}}
@@ -42,11 +45,18 @@
 #'   ## anything here will run
 #'
 #' @export
-maha_dist <- function(data, keep.NA=TRUE, robust=FALSE){
+maha_dist <- function(data, keep.NA=TRUE, robust=FALSE, stringsAsFactors=FALSE){
   # this implementation is heavily inspired by the implementation
   # in the "psych" package written by William Revelle
   if(!(any(class(data) %in% c("matrix", "data.frame"))))
     stop("\"data\" must be a data.frame (or matrix)", call.=FALSE)
+  ## check
+  if(stringsAsFactors){
+    char_cols <- unlist(lapply(data, class))=="character"
+    for(i in which(char_cols)){
+      data[,i] <- factor(data[,i])
+    }
+  }
   a.matrix <- data.matrix(data)
   if(ncol(a.matrix)<2)
     stop("\"data\" needs to have at least two columns", call.=FALSE)
@@ -67,6 +77,7 @@ maha_dist <- function(data, keep.NA=TRUE, robust=FALSE){
     dists[ apply(data, 1, function(x) any(is.na(x))) ] <- NA
   return(dists)
 }
+attr(maha_dist, "call") <- "maha_dist"
 
 
 #' Counts number of NAs in each row
@@ -95,7 +106,7 @@ maha_dist <- function(data, keep.NA=TRUE, robust=FALSE){
 #'
 #' @export
 num_row_NAs <- function(data, allow.NaN=FALSE){
-  if(!(class(data) %in% c("matrix", "data.frame")))
+  if(!(any(class(data) %in% c("matrix", "data.frame"))))
     stop("\"data\" must be a data.frame (or matrix)", call.=FALSE)
   pred <- function(x){ sum((is.na(x)&(!(is.nan(x))))) }
   if(allow.NaN){
@@ -104,5 +115,45 @@ num_row_NAs <- function(data, allow.NaN=FALSE){
   ret.vec <- apply(data, 1, pred)
   return(ret.vec)
 }
+attr(num_row_NAs, "call") <- "num_row_NAs"
 
 
+
+#' Concatenate all columns of each row in data frame into a string
+#'
+#' This function will return a vector, with the same length as the number
+#' of rows of the provided data frame. Each element of the vector will be
+#' it's corresponding row with all of its values (one for each column)
+#' "pasted" together in a string.
+#'
+#' @param data A data frame
+#' @param sep A string to separate the columns with (default: "")
+#' @return A vector of rows concatenated into strings
+#' @seealso \code{\link{paste}}
+#' @examples
+#'
+#' col_concat(mtcars)
+#'
+#' library(magrittr)            # for piping operator
+#'
+#' # you can use "assert_rows", "is_uniq", and this function to
+#' # check if joint duplicates (across different columns) appear
+#' # in a data frame
+#' \dontrun{
+#' mtcars %>%
+#'   assert_rows(col_concat, is_uniq, mpg, hp)
+#'   # fails because the first two rows are jointly duplicates
+#'   # on these two columns
+#' }
+#'
+#' mtcars %>%
+#'   assert_rows(col_concat, is_uniq, mpg, hp, wt) # ok
+#'
+#' @export
+col_concat <- function(data, sep=""){
+  if(!(any(class(data) %in% c("matrix", "data.frame"))))
+    stop("\"data\" must be a data.frame (or matrix)", call.=FALSE)
+
+  apply(data, 1, paste, sep="", collapse=sep)
+}
+attr(col_concat, "call") <- "col_concat"

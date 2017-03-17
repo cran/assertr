@@ -6,10 +6,11 @@
 \title{Raises error if predicate is FALSE for any row after applying
 row reduction function}
 \usage{
-assert_rows(data, row_reduction_fn, predicate, ..., error_fun = assertr_stop)
+assert_rows(data, row_reduction_fn, predicate, ...,
+  success_fun = success_continue, error_fun = error_stop)
 
 assert_rows_(data, row_reduction_fn, predicate, ..., .dots,
-  error_fun = assertr_stop, .nameofpred = "")
+  success_fun = success_continue, error_fun = error_stop)
 }
 \arguments{
 \item{data}{A data frame}
@@ -23,17 +24,19 @@ the provided data frame}
 Uses dplyr's \code{select} to select
 columns from data.}
 
-\item{error_fun}{Function to call if assertion fails. Takes one error
-string. Uses \code{stop} by default}
+\item{success_fun}{Function to call if assertion passes. Defaults to
+returning \code{data}.}
+
+\item{error_fun}{Function to call if assertion fails. Defaults to printing
+a summary of all errors.}
 
 \item{.dots}{Use assert_rows_() to select columns using standard evaluation.}
-
-\item{.nameofpred}{Text representation of predicate for printing in case
-of assertion violation. Will automatically be retrieved if left
-blank (default)}
 }
 \value{
-data if predicate assertions are TRUE. error if not.
+By default, the \code{data} is returned if predicate assertion
+        is TRUE and and error is thrown if not. If a non-default
+        \code{success_fun} or \code{error_fun} is used, the return
+        values of these function will be returned.
 }
 \description{
 Meant for use in a data analysis pipeline, this function applies a
@@ -43,6 +46,10 @@ any of these predicate applications yield FALSE, this function will raise
 an error, effectively terminating the pipeline early. If there are no
 FALSEs, this function will just return the data that it was supplied for
 further use in later parts of the pipeline.
+}
+\details{
+For examples of possible choices for the \code{success_fun} and
+\code{error_fun} parameters, run \code{help("success_and_error_functions")}
 }
 \note{
 See \code{vignette("assertr")} for how to use this in context
@@ -73,4 +80,3 @@ mtcars \%>\%
 \code{\link{insist_rows}} \code{\link{assert}}
          \code{\link{verify}} \code{\link{insist}}
 }
-

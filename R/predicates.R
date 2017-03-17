@@ -30,8 +30,8 @@ not_na <- function(x, allow.NaN=FALSE){
 }
 # so assert function knows to vectorize the function for
 # substantial speed increase
-comment(not_na) <- "assertr/vectorized"
-
+attr(not_na, "assertr_vectorized") <- TRUE
+attr(not_na, "call") <- "not_na"
 
 #' Creates bounds checking predicate
 #'
@@ -85,6 +85,7 @@ comment(not_na) <- "assertr/vectorized"
 within_bounds <- function(lower.bound, upper.bound,
                           include.lower=TRUE, include.upper=TRUE,
                           allow.na=TRUE){
+  the_call <- deparse(sys.call())
   if(!(is.numeric(lower.bound) && is.numeric(upper.bound)))
     stop("bounds must be numeric")
   if(lower.bound >= upper.bound)
@@ -103,7 +104,8 @@ within_bounds <- function(lower.bound, upper.bound,
     return((lower.operator(x, lower.bound) &
               upper.operator(x, upper.bound)) & !(is.na(x)))
   }
-  comment(fun) <- "assertr/vectorized"
+  attr(fun, "assertr_vectorized") <- TRUE
+  attr(fun, "call") <- the_call
   return(fun)
 }
 # so, this function returns a function to be used as argument to another
@@ -153,18 +155,22 @@ within_bounds <- function(lower.bound, upper.bound,
 #'
 #' @export
 in_set <- function(..., allow.na=TRUE){
+  the_call <- deparse(sys.call())
   set <- c(...)
   if(!length(set)) stop("can not test for membership in empty set")
-  function(x){
-    if(length(x)>1)      stop("bounds must be checked on a single element")
-    if(is.null(x))       stop("bounds must be checked on a single element")
-    if(x %in% set)
-      return(TRUE)
-    if(is.na(x))
-      if(allow.na)
-        return(TRUE)
-    return(FALSE)
+  fun <- function(x){
+    if(is.null(x))       stop("nothing to check set membership to")
+
+    raw_result <- x %in% set
+    if(allow.na){
+      these_are_NAs <- which(is.na(x))
+      raw_result[these_are_NAs] <- TRUE
+    }
+    return(raw_result)
   }
+  attr(fun, "assertr_vectorized") <- TRUE
+  attr(fun, "call") <- the_call
+  return(fun)
 }
 
 
@@ -219,10 +225,11 @@ in_set <- function(..., allow.na=TRUE){
 #'
 #' @export
 within_n_sds <- function(n, ...){
+  the_call <- deparse(sys.call())
   if(!is.numeric(n) || length(n)!=1 || n<=0){
     stop("'n' must be a positive number")
   }
-  function(a.vector){
+  fun <- function(a.vector){
     if(!is.vector(a.vector) || !is.numeric(a.vector))
       stop("argument must be a numeric vector")
     mu <- mean(a.vector, na.rm=TRUE)
@@ -231,6 +238,9 @@ within_n_sds <- function(n, ...){
     if(is.na(stdev)) stop("standard deviations of vector is NA")
     within_bounds((mu-(n*stdev)), (mu+(n*stdev)), ...)
   }
+  attr(fun, "call") <- the_call
+  return(fun)
+
 }
 
 
@@ -288,18 +298,71 @@ within_n_sds <- function(n, ...){
 #'
 #' @export
 within_n_mads <- function(n, ...){
+  the_call <- deparse(sys.call())
   if(!is.numeric(n) || length(n)!=1 || n<=0){
     stop("'n' must be a positive number")
   }
-  function(a.vector){
+  fun <- function(a.vector){
     if(!is.vector(a.vector) || !is.numeric(a.vector))
       stop("argument must be a numeric vector")
     dmad <- stats::mad(a.vector, na.rm=TRUE)
     dmed <- stats::median(a.vector, na.rm=TRUE)
     if(is.na(dmad)) stop("MAD of vector is NA")
+    if(dmad==0) stop("MAD of vector is 0")
     if(is.na(dmed)) stop("median of vector is NA")
     within_bounds((dmed-(n*dmad)), (dmed+(n*dmad)), ...)
   }
+  attr(fun, "call") <- the_call
+  return(fun)
 }
 
+
+#' Returns TRUE where no elements appear more than once
+#'
+#' This function is meant to take only a vector. It relies heavily on
+#' the \code{\link{duplicated}} function where it can be thought of as
+#' the inverse. Where this function differs, though--besides being only
+#' meant for one vector or column--is that it marks the first occurrence
+#' of a duplicated value as "non unique", as well.
+#'
+#' @param x A vector to check for unique elements in
+#' @param allow.na A logical indicating whether NAs should be preserved
+#'                 as missing values in the return value (FALSE) or
+#'                 if they should be treated just like any other value
+#'                 (TRUE) (default is FALSE)
+#'
+#' @return A vector of the same length where the corresponding element
+#'         is TRUE if the element only appears once in the vector and
+#'         FALSE otherwise
+#' @seealso \code{\link{duplicated}}
+#' @examples
+#'
+#' is_uniq(1:10)
+#'
+#' \dontrun{
+#' # returns FALSE where a "5" appears
+#' is_uniq(c(1:10, 5))
+#' }
+#'
+#' library(magrittr)
+#'
+#' \dontrun{
+#' # this fails 4 times
+#' mtcars %>% assert(is_uniq, qsec)
+#' }
+#'
+#' @export
+is_uniq <- function(x, allow.na=FALSE){
+  if(is.null(x))    stop("is_uniq must be called on non-null object")
+  raw_result <- !duplicated(x)
+  repeats <- x[!raw_result]
+  raw_result[x %in% repeats] <- FALSE
+  if(!allow.na){
+    these_are_NAs <- which(is.na(x))
+    raw_result[these_are_NAs] <- NA
+  }
+  return(raw_result)
+}
+attr(is_uniq, "call") <- "is_uniq"
+attr(is_uniq, "assertr_vectorized") <- TRUE
 

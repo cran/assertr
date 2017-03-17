@@ -5,10 +5,11 @@
 \alias{assert_}
 \title{Raises error if predicate is FALSE in any columns selected}
 \usage{
-assert(data, predicate, ..., error_fun = assertr_stop)
+assert(data, predicate, ..., success_fun = success_continue,
+  error_fun = error_stop)
 
-assert_(data, predicate, ..., .dots, error_fun = assertr_stop,
-  .nameofpred = "")
+assert_(data, predicate, ..., .dots, success_fun = success_continue,
+  error_fun = error_stop)
 }
 \arguments{
 \item{data}{A data frame}
@@ -19,17 +20,19 @@ assert_(data, predicate, ..., .dots, error_fun = assertr_stop,
 Uses dplyr's \code{select} to select
 columns from data.}
 
-\item{error_fun}{Function to call if assertion fails. Takes one error
-string. Uses \code{stop} by default}
+\item{success_fun}{Function to call if assertion passes. Defaults to
+returning \code{data}.}
+
+\item{error_fun}{Function to call if assertion fails. Defaults to printing
+a summary of all errors.}
 
 \item{.dots}{Use assert_() to select columns using standard evaluation.}
-
-\item{.nameofpred}{Text representation of predicate for printing in case
-of assertion violation. Will automatically be retrieved if left
-blank (default)}
 }
 \value{
-data if predicate assertion is TRUE. error if not.
+By default, the \code{data} is returned if predicate assertion
+        is TRUE and and error is thrown if not. If a non-default
+        \code{success_fun} or \code{error_fun} is used, the return
+        values of these function will be returned.
 }
 \description{
 Meant for use in a data analysis pipeline, this function will
@@ -38,6 +41,10 @@ when the predicate is applied to every element of the columns
 indicated. If any element in any of the columns, when applied
 to the predicate, is FALSE, then this function will raise an
 error, effectively terminating the pipeline early.
+}
+\details{
+For examples of possible choices for the \code{success_fun} and
+\code{error_fun} parameters, run \code{help("success_and_error_functions")}
 }
 \note{
 See \code{vignette("assertr")} for how to use this in context
@@ -76,4 +83,3 @@ mtcars \%>\%
 \code{\link{verify}} \code{\link{insist}}
          \code{\link{assert_rows}} \code{\link{insist_rows}}
 }
-

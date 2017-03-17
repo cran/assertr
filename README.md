@@ -3,7 +3,7 @@ assertr
 
 ![assertr logo](http://statethatiamin.onlythisrose.com/assertrlogo.png)
 
-[![Build Status](https://travis-ci.org/ropenscilabs/assertr.svg?branch=master)](https://travis-ci.org/ropenscilabs/assertr)
+[![Build Status](https://travis-ci.org/ropensci/assertr.svg?branch=master)](https://travis-ci.org/ropensci/assertr)
 [![](http://www.r-pkg.org/badges/version/assertr)](https://cran.r-project.org/package=assertr)
 [![CRAN RStudio mirror downloads](http://cranlogs.r-pkg.org/badges/assertr)](https://cran.r-project.org/package=assertr)
 
@@ -24,7 +24,7 @@ You can install the latest version on CRAN like this
 or you can install the bleeding-edge development version like this:
 ```{r}
     install.packages("devtools")
-    devtools::install_github("ropenscilabs/assertr")
+    devtools::install_github("ropensci/assertr")
 ```
 ### What does it look like?
 This package offers five assertion functions, `assert`, `verify`,
@@ -36,6 +36,7 @@ built-in but rather procured from an external source that was known for making
 errors in data entry or coding. Pretend we wanted to find the average
 miles per gallon for each number of engine cylinders. We might want to first,
 confirm
+- that it has the columns "mpg", "vs", and "am"
 - that the dataset contains more than 10 observations
 - that the column for 'miles per gallon' (mpg) is a positive number
 - that the column for ‘miles per gallon’ (mpg) does not contain a datum
@@ -43,6 +44,7 @@ that is outside 4 standard deviations from its mean, and
 - that the am and vs columns (automatic/manual and v/straight engine,
 respectively) contain 0s and 1s only
 - each row contains at most 2 NAs
+- each row is unique *jointly* between the "mpg", "am", and "wt" columns
 - each row's mahalanobis distance is within 10 median absolute deviations of
 all the distances (for outlier detection)
 
@@ -50,12 +52,17 @@ all the distances (for outlier detection)
 This could be written (in order) using `assertr` like this:
 
 ```{r}
+    library(dplyr)
+    library(assertr)
+
     mtcars %>%
+      verify(has_all_names("mpg", "vs", "am", "wt")) %>%
       verify(nrow(.) > 10) %>%
       verify(mpg > 0) %>%
       insist(within_n_sds(4), mpg) %>%
       assert(in_set(0,1), am, vs) %>%
       assert_rows(num_row_NAs, within_bounds(0,2), everything()) %>%
+      assert_rows(col_concat, is_uniq, mpg, am, wt) %>%
       insist_rows(maha_dist, within_n_mads(10), everything()) %>%
       group_by(cyl) %>%
       summarise(avg.mpg=mean(mpg))
@@ -115,7 +122,7 @@ Internally, the `assert_rows` function uses `dplyr`'s`select` function to
 extract the columns to test the predicate function on.
 
 
-`assertr` also offers three (so far) predicate functions designed to be used
+`assertr` also offers four (so far) predicate functions designed to be used
 with the `assert` and `assert_rows` functions:
 
 - `not_na` - that checks if an element is not NA
@@ -123,6 +130,7 @@ with the `assert` and `assert_rows` functions:
 value falls within the bounds supplied, and
 - `in_set` - that returns a predicate function that checks if an element is
 a member of the set supplied.
+- `is_uniq` - that checks to see if each element appears only once
 
 and predicate generators designed to be used with the `insist` and `insist_rows`
 functions:
@@ -138,6 +146,7 @@ and `insist_rows`:
 - `num_row_NAs` - counts number of missing values in each row
 - `maha_dist` - computes the mahalanobis distance of each row (for outlier
 detection). It will coerce categorical variables into numerics if it needs to.
+- `col_concat` - concatenates all rows into strings
 
 Finally, each assertion function has a counterpart that using standard
 evaluation. The counterpart functions are postfixed by "_" (an underscore).
@@ -148,6 +157,6 @@ For more info, check out the `assertr` vignette
 ```{r}
     > vignette("assertr")
 ```
-Or [read it here](http://cran.r-project.org/web/packages/assertr/vignettes/assertr.html)
+Or [read it here](https://CRAN.R-project.org/package=assertr/vignettes/assertr.html)
 
 [![ropensci\_footer](http://ropensci.org/public_images/github_footer.png)](http://ropensci.org)

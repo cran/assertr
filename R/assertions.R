@@ -19,14 +19,18 @@
 #'            Uses dplyr's \code{select} to select
 #'            columns from data.
 #' @param .dots Use assert_() to select columns using standard evaluation.
-#' @param error_fun Function to call if assertion fails. Takes one error
-#'         string. Uses \code{stop} by default
-#' @param .nameofpred Text representation of predicate for printing in case
-#'         of assertion violation. Will automatically be retrieved if left
-#'         blank (default)
+#' @param success_fun Function to call if assertion passes. Defaults to
+#'                    returning \code{data}.
+#' @param error_fun Function to call if assertion fails. Defaults to printing
+#'                  a summary of all errors.
 #'
+#' @details For examples of possible choices for the \code{success_fun} and
+#' \code{error_fun} parameters, run \code{help("success_and_error_functions")}
 #'
-#' @return data if predicate assertion is TRUE. error if not.
+#' @return By default, the \code{data} is returned if predicate assertion
+#'         is TRUE and and error is thrown if not. If a non-default
+#'         \code{success_fun} or \code{error_fun} is used, the return
+#'         values of these function will be returned.
 #' @note See \code{vignette("assertr")} for how to use this in context
 #' @seealso \code{\link{verify}} \code{\link{insist}}
 #'          \code{\link{assert_rows}} \code{\link{insist_rows}}
@@ -60,25 +64,41 @@
 #'   # nothing here will run}
 #'
 #' @export
-assert <- function(data, predicate, ..., error_fun=assertr_stop){
-  name.of.predicate <- as.character(substitute(predicate))
-  if(length(name.of.predicate)>1) name.of.predicate <- name.of.predicate[1]
+assert <- function(data, predicate, ..., success_fun=success_continue,
+                   error_fun=error_stop){
   assert_(data, predicate, .dots = lazyeval::lazy_dots(...),
-          error_fun = error_fun,
-          .nameofpred = name.of.predicate)
+          success_fun=success_fun,
+          error_fun = error_fun)
 }
 
 #' @export
 #' @rdname assert
-assert_ <- function(data, predicate, ..., .dots, error_fun=assertr_stop,
-                    .nameofpred=""){
+assert_ <- function(data, predicate, ..., .dots, success_fun=success_continue,
+                      error_fun=error_stop){
   sub.frame <- dplyr::select_(data, ..., .dots = .dots)
-  if(.nameofpred==""){
-    name.of.predicate <- as.character(substitute(predicate))
-    if(length(name.of.predicate)>1) name.of.predicate <- name.of.predicate[1]
+  if(!is.null(attr(predicate, "call"))){
+    name.of.predicate <- attr(predicate, "call")
   }
-  else
-    name.of.predicate <- .nameofpred
+  else {
+    name.of.predicate <- deparse(substitute(predicate))
+    if(length(name.of.predicate)>1)
+      name.of.predicate <- gsub("\\s{2,}", " ",
+                                paste0(name.of.predicate, collapse=""))
+  }
+
+  success_fun_override <- attr(data, "assertr_in_chain_success_fun_override")
+  if(!is.null(success_fun_override)){
+    if(!identical(success_fun, success_fun_override))
+      # warning("user defined success_fun overridden by assertr chain")
+    success_fun <- success_fun_override
+  }
+  error_fun_override <- attr(data, "assertr_in_chain_error_fun_override")
+  if(!is.null(error_fun_override)){
+    if(!identical(error_fun, error_fun_override))
+      # warning("user defined error_fun overriden by assertr chain")
+    error_fun <- error_fun_override
+  }
+
 
   if(!is.vectorized.predicate(predicate))
     predicate <- make.predicate.proper(predicate)
@@ -90,22 +110,28 @@ assert_ <- function(data, predicate, ..., .dots, error_fun=assertr_stop,
                       return(apply.predicate.to.vector(this.vector,
                                                        predicate))})
 
-  if(all(log.mat))
-    return(data)
+  # if all checks pass *and* there are no leftover errors
+  if(all(log.mat) && is.null(attr(data, "assertr_errors")))
+    return(success_fun(data))
 
-  messages <- sapply(colnames(log.mat), function(col.name){
+  errors <- lapply(colnames(log.mat), function(col.name){
     col <- log.mat[, col.name]
     num.violations <- sum(!col)
     if(num.violations==0)
-      return("")
-    index.of.first.violation <- which(!col)[1]
-    offending.element <- sub.frame[[col.name]][index.of.first.violation]
-    make.assert.error.message(name.of.predicate, col.name, num.violations,
-                              index.of.first.violation, offending.element)
+      return(NULL)
+    index.of.violations <- which(!col)
+    offending.elements <- sub.frame[[col.name]][index.of.violations]
+    an_error <- make.assertr.assert.error(name.of.predicate,
+                                          col.name,
+                                          num.violations,
+                                          index.of.violations,
+                                          offending.elements)
+    return(an_error)
   })
 
-  messages <- paste0(messages[messages!=""], collapse = '')
-  error_fun(messages)
+  # remove the elements corresponding to the columns without errors
+  errors <- Filter(function(x) !is.null(x), errors)
+  error_fun(errors, data=data)
 }
 
 
@@ -129,14 +155,18 @@ assert_ <- function(data, predicate, ..., .dots, error_fun=assertr_stop,
 #'            Uses dplyr's \code{select} to select
 #'            columns from data.
 #' @param .dots Use assert_rows_() to select columns using standard evaluation.
-#' @param error_fun Function to call if assertion fails. Takes one error
-#'         string. Uses \code{stop} by default
-#' @param .nameofpred Text representation of predicate for printing in case
-#'         of assertion violation. Will automatically be retrieved if left
-#'         blank (default)
+#' @param success_fun Function to call if assertion passes. Defaults to
+#'                    returning \code{data}.
+#' @param error_fun Function to call if assertion fails. Defaults to printing
+#'                  a summary of all errors.
 #'
+#' @details For examples of possible choices for the \code{success_fun} and
+#' \code{error_fun} parameters, run \code{help("success_and_error_functions")}
 #'
-#' @return data if predicate assertions are TRUE. error if not.
+#' @return By default, the \code{data} is returned if predicate assertion
+#'         is TRUE and and error is thrown if not. If a non-default
+#'         \code{success_fun} or \code{error_fun} is used, the return
+#'         values of these function will be returned.
 #' @note See \code{vignette("assertr")} for how to use this in context
 #' @seealso \code{\link{insist_rows}} \code{\link{assert}}
 #'          \code{\link{verify}} \code{\link{insist}}
@@ -165,25 +195,50 @@ assert_ <- function(data, predicate, ..., .dots, error_fun=assertr_stop,
 #' @export
 #'
 assert_rows <- function(data, row_reduction_fn, predicate, ...,
-                        error_fun=assertr_stop){
-  name.of.predicate <- as.character(substitute(predicate))
-  if(length(name.of.predicate)>1) name.of.predicate <- name.of.predicate[1]
+                        success_fun=success_continue,
+                        error_fun=error_stop){
   assert_rows_(data, row_reduction_fn, predicate,
-               .dots = lazyeval::lazy_dots(...), error_fun = error_fun,
-               .nameofpred = name.of.predicate)
+               .dots = lazyeval::lazy_dots(...),
+               success_fun = success_fun,
+               error_fun = error_fun)
 }
 
 #' @export
 #' @rdname assert_rows
 assert_rows_ <- function(data, row_reduction_fn, predicate, ..., .dots,
-                         error_fun=assertr_stop, .nameofpred=""){
+                         success_fun=success_continue,
+                         error_fun=error_stop){
   sub.frame <- dplyr::select_(data, ..., .dots = .dots)
-  if(.nameofpred==""){
-    name.of.predicate <- as.character(substitute(predicate))
-    if(length(name.of.predicate)>1) name.of.predicate <- name.of.predicate[1]
+  if(!is.null(attr(row_reduction_fn, "call"))){
+    name.of.row.redux.fn <- attr(row_reduction_fn, "call")
   }
-  else
-    name.of.predicate <- .nameofpred
+  else {
+    name.of.row.redux.fn <- deparse(substitute(row_reduction_fn))
+    if(length(name.of.row.redux.fn)>1)
+      name.of.row.redux.fn <- gsub("\\s{2,}", " ",
+                                   paste0(name.of.row.redux.fn, collapse=""))
+  }
+  if(!is.null(attr(predicate, "call"))){
+    name.of.predicate <- attr(predicate, "call")
+  }
+  else {
+    name.of.predicate <- deparse(substitute(predicate))
+    if(length(name.of.predicate)>1)
+      name.of.predicate <- gsub("\\s{2,}", " ",
+                                paste0(name.of.predicate, collapse=""))
+  }
+  success_fun_override <- attr(data, "assertr_in_chain_success_fun_override")
+  if(!is.null(success_fun_override)){
+    if(!identical(success_fun, success_fun_override))
+      # warning("user defined success_fun overridden by assertr chain")
+    success_fun <- success_fun_override
+  }
+  error_fun_override <- attr(data, "assertr_in_chain_error_fun_override")
+  if(!is.null(error_fun_override)){
+    if(!identical(error_fun, error_fun_override))
+      # warning("user defined error_fun overriden by assertr chain")
+    error_fun <- error_fun_override
+  }
 
   if(!is.vectorized.predicate(predicate))
     predicate <- make.predicate.proper(predicate)
@@ -192,17 +247,21 @@ assert_rows_ <- function(data, row_reduction_fn, predicate, ..., .dots,
 
   log.vec <- apply.predicate.to.vector(redux, predicate)
 
-  if(all(log.vec))
-    return(data)
+  # if all checks pass *and* there are no leftover errors
+  if(all(log.vec) && is.null(attr(data, "assertr_errors")))
+    return(success_fun(data))
 
   num.violations <- sum(!log.vec)
   if(num.violations==0)
     return("")
   loc.violations <- which(!log.vec)
 
-  message <- make.assert_rows.error.message(name.of.predicate, num.violations,
-                                            loc.violations)
-  error_fun(message)
+  error <- make.assertr.assert_rows.error(name.of.row.redux.fn,
+                                          name.of.predicate,
+                                          num.violations,
+                                          loc.violations)
+  error_fun(list(error), data=data)
+
 }
 
 
@@ -226,13 +285,18 @@ assert_rows_ <- function(data, row_reduction_fn, predicate, ..., .dots,
 #'            Uses dplyr's \code{select} to select
 #'            columns from data.
 #' @param .dots Use insist_() to select columns using standard evaluation.
-#' @param error_fun Function to call if assertion fails. Takes one error
-#'         string. Uses \code{stop} by default
-#' @param .nameofpred Text representation of predicate for printing in case
-#'         of assertion violation. Will automatically be retrieved if left
-#'         blank (default)
+#' @param success_fun Function to call if assertion passes. Defaults to
+#'                    returning \code{data}.
+#' @param error_fun Function to call if assertion fails. Defaults to printing
+#'                  a summary of all errors.
 #'
-#' @return data if dynamically created predicate assertion is TRUE. error if not.
+#' @details For examples of possible choices for the \code{success_fun} and
+#' \code{error_fun} parameters, run \code{help("success_and_error_functions")}
+#'
+#' @return By default, the \code{data} is returned if dynamically created
+#'         predicate assertion is TRUE and and error is thrown if not. If a
+#'         non-default \code{success_fun} or \code{error_fun} is used, the
+#'         return values of these function will be returned.
 #' @note See \code{vignette("assertr")} for how to use this in context
 #' @seealso \code{\link{assert}} \code{\link{verify}} \code{\link{insist_rows}}
 #'          \code{\link{assert_rows}}
@@ -258,27 +322,42 @@ assert_rows_ <- function(data, row_reduction_fn, predicate, ..., .dots,
 #'   # is terminated so nothing after this statement will run}
 #'
 #' @export
-insist <- function(data, predicate_generator, ..., error_fun=assertr_stop){
-  name.of.predicate.generator <- as.character(substitute(predicate_generator))
-  if(length(name.of.predicate.generator)>1)
-    name.of.predicate.generator <- name.of.predicate.generator[1]
+insist <- function(data, predicate_generator, ...,
+                   success_fun=success_continue,
+                   error_fun=error_stop){
   insist_(data, predicate_generator, .dots = lazyeval::lazy_dots(...),
-          error_fun = error_fun,
-          .nameofpred = name.of.predicate.generator)
+          success_fun=success_fun,
+          error_fun = error_fun)
 }
 
 #' @export
 #' @rdname insist
 insist_ <- function(data, predicate_generator, ..., .dots,
-                    error_fun=assertr_stop, .nameofpred=""){
+                    success_fun=success_continue,
+                    error_fun=error_stop){
   sub.frame <- dplyr::select_(data, ..., .dots = .dots)
-  if(.nameofpred==""){
-    name.of.predicate.generator <- as.character(substitute(predicate_generator))
-    if(length(name.of.predicate.generator)>1)
-      name.of.predicate.generator <- name.of.predicate.generator[1]
+  if(!is.null(attr(predicate_generator, "call"))){
+    name.of.predicate.generator <- attr(predicate_generator, "call")
   }
-  else
-    name.of.predicate.generator <- .nameofpred
+  else {
+    name.of.predicate.generator <- deparse(substitute(predicate_generator))
+    if(length(name.of.predicate.generator)>1)
+      name.of.predicate.generator <- gsub("\\s{2,}", " ",
+                                          paste0(name.of.predicate.generator,
+                                                 collapse=""))
+  }
+  success_fun_override <- attr(data, "assertr_in_chain_success_fun_override")
+  if(!is.null(success_fun_override)){
+    if(!identical(success_fun, success_fun_override))
+      # warning("user defined success_fun overridden by assertr chain")
+    success_fun <- success_fun_override
+  }
+  error_fun_override <- attr(data, "assertr_in_chain_error_fun_override")
+  if(!is.null(error_fun_override)){
+    if(!identical(error_fun, error_fun_override))
+      # warning("user defined error_fun overriden by assertr chain")
+    error_fun <- error_fun_override
+  }
 
   # get true predicates (not the generator)
   true.predicates <- sapply(names(sub.frame),
@@ -291,23 +370,29 @@ insist_ <- function(data, predicate_generator, ..., .dots,
                       return(apply.predicate.to.vector(this.vector,
                                                        predicate))})
 
-  if(all(log.mat))
-    return(data)
+  # if all checks pass *and* there are no leftover errors
+  if(all(log.mat) && is.null(attr(data, "assertr_errors")))
+    return(success_fun(data))
 
-  messages <- sapply(colnames(log.mat), function(col.name){
+  errors <- lapply(colnames(log.mat), function(col.name){
     col <- log.mat[, col.name]
     num.violations <- sum(!col)
     if(num.violations==0)
-      return("")
-    index.of.first.violation <- which(!col)[1]
-    offending.element <- sub.frame[[col.name]][index.of.first.violation]
-    make.assert.error.message(name.of.predicate.generator, col.name,
-                              num.violations, index.of.first.violation,
-                              offending.element)
+      return(NULL)
+    index.of.violations <- which(!col)
+    offending.elements <- sub.frame[[col.name]][index.of.violations]
+    an_error <- make.assertr.assert.error(name.of.predicate.generator,
+                                          col.name,
+                                          num.violations,
+                                          index.of.violations,
+                                          offending.elements)
+    return(an_error)
   })
 
-  messages <- paste0(messages[messages!=""], collapse = '')
-  error_fun(messages)
+  # remove the elements corresponding to the columns without errors
+  errors <- Filter(function(x) !is.null(x), errors)
+
+  error_fun(errors, data=data)
 }
 
 
@@ -336,14 +421,18 @@ insist_ <- function(data, predicate_generator, ..., .dots,
 #'            Uses dplyr's \code{select} to select
 #'            columns from data.
 #' @param .dots Use insist_rows_() to select columns using standard evaluation.
-#' @param error_fun Function to call if assertion fails. Takes one error
-#'         string. Uses \code{stop} by default
-#' @param .nameofpred Text representation of predicate for printing in case
-#'         of assertion violation. Will automatically be retrieved if left
-#'         blank (default)
+#' @param success_fun Function to call if assertion passes. Defaults to
+#'                    returning \code{data}.
+#' @param error_fun Function to call if assertion fails. Defaults to printing
+#'                  a summary of all errors.
 #'
+#' @details For examples of possible choices for the \code{success_fun} and
+#' \code{error_fun} parameters, run \code{help("success_and_error_functions")}
 #'
-#' @return data if dynamically created predicate assertion is TRUE. error if not.
+#' @return By default, the \code{data} is returned if dynamically created
+#'         predicate assertion is TRUE and and error is thrown if not. If a
+#'         non-default \code{success_fun} or \code{error_fun} is used, the
+#'         return values of these function will be returned.
 #' @note See \code{vignette("assertr")} for how to use this in context
 #' @seealso \code{\link{insist}} \code{\link{assert_rows}}
 #'          \code{\link{assert}} \code{\link{verify}}
@@ -371,27 +460,50 @@ insist_ <- function(data, predicate_generator, ..., .dots,
 #' @export
 #'
 insist_rows <- function(data, row_reduction_fn, predicate_generator, ...,
-                   error_fun=assertr_stop){
-  name.of.predicate.generator <- as.character(substitute(predicate_generator))
-  if(length(name.of.predicate.generator)>1)
-    name.of.predicate.generator <- name.of.predicate.generator[1]
+                        success_fun=success_continue,
+                        error_fun=error_stop){
   insist_rows_(data, row_reduction_fn, predicate_generator,
-               .dots = lazyeval::lazy_dots(...), error_fun = error_fun,
-               .nameofpred = name.of.predicate.generator)
+               .dots = lazyeval::lazy_dots(...),
+               success_fun=success_fun, error_fun = error_fun)
 }
 
 #' @export
 #' @rdname insist_rows
-insist_rows_ <- function(data, row_reduction_fn, predicate_generator, ..., .dots,
-                    error_fun=assertr_stop, .nameofpred=""){
+insist_rows_ <- function(data, row_reduction_fn, predicate_generator, ...,
+                         .dots, success_fun=success_continue,
+                         error_fun=error_stop){
   sub.frame <- dplyr::select_(data, ..., .dots = .dots)
-  if(.nameofpred==""){
-    name.of.predicate.generator <- as.character(substitute(predicate_generator))
-    if(length(name.of.predicate.generator)>1)
-      name.of.predicate.generator <- name.of.predicate.generator[1]
+  if(!is.null(attr(row_reduction_fn, "call"))){
+    name.of.row.redux.fn <- attr(row_reduction_fn, "call")
   }
-  else
-    name.of.predicate.generator <- .nameofpred
+  else {
+    name.of.row.redux.fn <- deparse(substitute(row_reduction_fn))
+    if(length(name.of.row.redux.fn)>1)
+      name.of.row.redux.fn <- gsub("\\s{2,}", " ",
+                                   paste0(name.of.row.redux.fn, collapse=""))
+  }
+  if(!is.null(attr(predicate_generator, "call"))){
+    name.of.predicate.generator <- attr(predicate_generator, "call")
+  }
+  else {
+    name.of.predicate.generator <- deparse(substitute(predicate_generator))
+    if(length(name.of.predicate.generator)>1)
+      name.of.predicate.generator <- gsub("\\s{2,}", " ",
+                                          paste0(name.of.predicate.generator,
+                                                 collapse=""))
+  }
+  success_fun_override <- attr(data, "assertr_in_chain_success_fun_override")
+  if(!is.null(success_fun_override)){
+    if(!identical(success_fun, success_fun_override))
+      # warning("user defined success_fun overridden by assertr chain")
+    success_fun <- success_fun_override
+  }
+  error_fun_override <- attr(data, "assertr_in_chain_error_fun_override")
+  if(!is.null(error_fun_override)){
+    if(!identical(error_fun, error_fun_override))
+      # warning("user defined error_fun overriden by assertr chain")
+    error_fun <- error_fun_override
+  }
 
   redux <- row_reduction_fn(sub.frame)
 
@@ -399,19 +511,21 @@ insist_rows_ <- function(data, row_reduction_fn, predicate_generator, ..., .dots
 
   log.vec <- apply.predicate.to.vector(redux, predicate)
 
-  if(all(log.vec))
-    return(data)
+  # if all checks pass *and* there are no leftover errors
+  if(all(log.vec) && is.null(attr(data, "assertr_errors")))
+    return(success_fun(data))
 
   num.violations <- sum(!log.vec)
   if(num.violations==0)
     return("")
   loc.violations <- which(!log.vec)
 
-  message <- make.assert_rows.error.message(name.of.predicate.generator,
-                                            num.violations,loc.violations)
-  error_fun(message)
+  error <- make.assertr.assert_rows.error(name.of.row.redux.fn,
+                                          name.of.predicate.generator,
+                                          num.violations,
+                                          loc.violations)
+  error_fun(list(error), data=data)
 }
-
 
 
 
@@ -427,10 +541,18 @@ insist_rows_ <- function(data, row_reduction_fn, predicate_generator, ..., .dots
 #'
 #' @param data A data frame, list, or environment
 #' @param expr A logical expression
-#' @param error_fun Function to call if assertion fails. Takes one error
-#'         string. Uses \code{stop} by default
+#' @param success_fun Function to call if assertion passes. Defaults to
+#'                    returning \code{data}.
+#' @param error_fun Function to call if assertion fails. Defaults to printing
+#'                  a summary of all errors.
 #'
-#' @return data if verification passes. error if not.
+#' @details For examples of possible choices for the \code{success_fun} and
+#' \code{error_fun} parameters, run \code{help("success_and_error_functions")}
+#'
+#' @return By default, the \code{data} is returned if predicate assertion
+#'         is TRUE and and error is thrown if not. If a non-default
+#'         \code{success_fun} or \code{error_fun} is used, the return
+#'         values of these function will be returned.
 #' @note See \code{vignette("assertr")} for how to use this in context
 #' @seealso \code{\link{assert}} \code{\link{insist}}
 #' @examples
@@ -463,16 +585,31 @@ insist_rows_ <- function(data, row_reduction_fn, predicate_generator, ..., .dots
 #'
 #'
 #' @export
-verify <- function(data, expr, error_fun=stop){
+verify <- function(data, expr, success_fun=success_continue,
+                   error_fun=error_stop){
   expr <- substitute(expr)
   # conform to terminology from subset
   envir <- data
   enclos <- parent.frame()
   logical.results <- eval(expr, envir, enclos)
-  if(all(logical.results))
-    return(data)
+
+  success_fun_override <- attr(data, "assertr_in_chain_success_fun_override")
+  if(!is.null(success_fun_override)){
+    if(!identical(success_fun, success_fun_override))
+      # warning("user defined success_fun overridden by assertr chain")
+    success_fun <- success_fun_override
+  }
+  error_fun_override <- attr(data, "assertr_in_chain_error_fun_override")
+  if(!is.null(error_fun_override)){
+    if(!identical(error_fun, error_fun_override))
+      # warning("user defined error_fun overriden by assertr chain")
+    error_fun <- error_fun_override
+  }
+
+  # if all checks pass *and* there are no leftover errors
+  if(all(logical.results) && is.null(attr(data, "assertr_errors")))
+    return(success_fun(data))
   num.violations <- sum(!logical.results)
-  error.message <- make.verify.error.message(num.violations)
-  error.message <- paste0(error.message, collapse = '')
-  error_fun(error.message)
+  error <- make.assertr.verify.error(num.violations, deparse(expr))
+  error_fun(list(error), data=data)
 }

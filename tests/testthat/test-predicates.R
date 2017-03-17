@@ -52,7 +52,11 @@ test_that("not_na errors out when appropriate", {
 })
 
 test_that("predicate is tagged for assert function to vectorize", {
-  expect_equal(comment(not_na), "assertr/vectorized")
+  expect_true(attr(not_na, "assertr_vectorized"))
+})
+
+test_that("predicate appropriately assigns the 'call' attribute", {
+  expect_equal(attr(not_na, "call"), "not_na")
 })
 ######################################
 
@@ -110,7 +114,12 @@ test_that("returned predicate fails appropriately", {
 })
 
 test_that("returned predicate is tagged for assert function to vectorize", {
-  expect_equal(comment(within_bounds(1,2)), "assertr/vectorized")
+  expect_true(attr(within_bounds(1,2), "assertr_vectorized"))
+})
+
+test_that("predicate appropriately assigns the 'call' attribute", {
+  expect_equal(attr(within_bounds(0, test.vect[1]), "call"),
+               "within_bounds(0, test.vect[1])")
 })
 #####################################
 
@@ -151,6 +160,15 @@ test_that("second inner function fails appropriately", {
   expect_error(within_n_sds(1)(c("johnny", "marr")),
                "argument must be a numeric vector")
 })
+
+test_that("returned predicate is tagged for assert function to vectorize", {
+  expect_true(attr(within_n_sds(1)(test.vect), "assertr_vectorized"))
+})
+
+test_that("predicate appropriately assigns the 'call' attribute", {
+  expect_equal(attr(within_n_sds(100*test.vect[1]), "call"),
+               "within_n_sds(100 * test.vect[1])")
+})
 ############################################
 
 
@@ -189,9 +207,19 @@ test_that("second inner function fails appropriately", {
   expect_error(within_n_mads(1)(),
                "argument .a.vector. is missing")
   expect_error(within_n_mads(1)(1),
-               "lower bound must be strictly lower than upper bound")
+               "MAD of vector is 0")
   expect_error(within_n_mads(1)(c("johnny", "marr")),
                "argument must be a numeric vector")
+})
+
+test_that("weird edge cases", {
+  expect_error(within_n_mads(2)(mtcars$vs),
+               "MAD of vector is 0")
+})
+
+test_that("predicate appropriately assigns the 'call' attribute", {
+  expect_equal(attr(within_n_mads(test.vect[2]*test.vect[1]), "call"),
+               "within_n_mads(test.vect[2] * test.vect[1])")
 })
 ############################################
 
@@ -215,14 +243,63 @@ test_that("returned predicate works appropriately", {
   expect_equal(in_set(1:10, allow.na = FALSE)(NA), FALSE)
   expect_equal(in_set(1, "tree")("tree"), TRUE)
   expect_equal(in_set(1, "tree")("leaf"), FALSE)
+  # a vector now
+  expect_equal(in_set(3, 4)(c(4,pi)), c(TRUE, FALSE))
+  expect_equal(in_set(3, 4)(c(4,3)), c(TRUE, TRUE))
+  expect_equal(in_set(1:10)(1:11), c(rep(TRUE, 10), FALSE))
+  expect_equal(in_set(1:10, allow.na = TRUE)(c(1:10, NA)), rep(TRUE, 11))
+  expect_equal(in_set(1:10, allow.na = FALSE)(c(1:10, NA)), c(rep(TRUE, 10), FALSE))
 })
 
 test_that("returned predicate fails appropriately", {
   expect_error(in_set(0,1)(),
                ".x. is missing")
-  expect_error(in_set(0,1)(c(1,2)),
-               "bounds must be checked on a single element")
   expect_error(in_set(0,1)(c()),
-               "bounds must be checked on a single element")
+               "nothing to check set membership to")
+})
+
+test_that("returned predicate is tagged for assert function to vectorize", {
+  expect_true(attr(in_set(1,2), "assertr_vectorized"))
+})
+
+test_that("predicate appropriately assigns the 'call' attribute", {
+  expect_equal(attr(in_set(0,  1), "call"), "in_set(0, 1)")
+  expect_equal(attr(in_set("ένα", "δύο", "τρία", "δέκατέσσερα"), "call"),
+               "in_set(\"ένα\", \"δύο\", \"τρία\", \"δέκατέσσερα\")")
+})
+
+######################################
+
+
+############### is_uniq ###############
+
+test_that("is_uniq works correctly", {
+  expect_equal(is_uniq(c("tree", "arbol")), c(TRUE, TRUE))
+  expect_equal(is_uniq(c("tree", "arbol", "tree")), c(FALSE, TRUE, FALSE))
+  expect_equal(is_uniq(c("tree", "árbol", NA, "δέντρο")),
+               c(TRUE, TRUE, NA, TRUE))
+  expect_equal(is_uniq(c("tree", "árbol", NA, "δέντρο", "δέντρο")),
+               c(TRUE, TRUE, NA, FALSE, FALSE))
+  expect_equal(is_uniq(c("tree", "árbol", NA, "δέντρο"), allow.na=TRUE),
+               c(TRUE, TRUE, TRUE, TRUE))
+  expect_equal(is_uniq(c("tree", "árbol", NA, "δέντρο", "δέντρο"), allow.na=TRUE),
+               c(TRUE, TRUE, TRUE, FALSE, FALSE))
+  expect_equal(is_uniq(c("tree", "árbol", NA, "δέντρο", NA, "δέντρο"), allow.na=TRUE),
+               c(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE))
+})
+
+test_that("is_uniq errors out when appropriate", {
+  expect_error(is_uniq(c()),
+               "is_uniq must be called on non-null object")
+  expect_error(is_uniq(),
+               ".x. is missing")
+})
+
+test_that("predicate is tagged for assert function to vectorize", {
+  expect_true(attr(is_uniq, "assertr_vectorized"))
+})
+
+test_that("predicate appropriately assigns the 'call' attribute", {
+  expect_equal(attr(is_uniq, "call"), "is_uniq")
 })
 ######################################

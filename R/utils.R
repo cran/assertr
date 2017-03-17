@@ -4,20 +4,6 @@
 ##
 
 
-# for error messages, it's useful if the function
-# name can be used (so the useR can tell what)
-# predicate function failed. The problem is,
-# assertions lend themselves to use with unnamed
-# lambda functions so we have to make a better
-# way to represent that
-# stringify() used on a lamda will return a vector
-# of character
-get.name.of.function <- function(stringified.function){
-  if(length(stringified.function) > 1)
-    return("(lambda expression)")
-  return(stringified.function)
-}
-
 
 # as a convenience, this package allows for the creation
 # of predicates that only define a false condition. we
@@ -30,7 +16,7 @@ make.predicate.proper <- function(improper.predicate){
     return(TRUE)
   }
   if(is.vectorized.predicate(improper.predicate)){
-    comment(ret.fun) <- "assertr/vectorized"
+    attr(ret.fun, "assertr_vectorized") <- TRUE
   }
   return(ret.fun)
 }
@@ -38,33 +24,9 @@ make.predicate.proper <- function(improper.predicate){
 # marvel at this function's dedication to the FP paradigm!
 
 
-# abstract out creation of error messages
-# so we can make it prettier in future versions
-make.assert.error.message <- function(name.of.predicate, column,
-                                      num.violations, index.of.first.violation,
-                                      offending.element){
-  time.or.times <- ifelse(num.violations==1, "time", "times")
-  eg.or.value <- ifelse(num.violations==1, "value", "e.g.")
-  paste0("\nVector '", column, "' violates assertion '", name.of.predicate,
-         "' ", num.violations, " ", time.or.times, " (", eg.or.value, " [",
-         offending.element, "] at index ", index.of.first.violation, ")")
-}
-
-
-
-make.assert_rows.error.message <- function(name.of.predicate, num.violations,
-                                           loc.violations){
-  time.or.times <- ifelse(num.violations==1, "time", "times")
-  eg.or.value <- ifelse(num.violations==1, "", "e.g. ")
-
-  paste0("Data frame row reduction violates predicate '",
-         name.of.predicate, "' ", num.violations, " ", time.or.times, " (",
-         eg.or.value, "at row number ", loc.violations[1], ")")
-}
-
-
 is.vectorized.predicate <- function(predicate){
-  if(!is.null(comment(predicate)) && comment(predicate)=="assertr/vectorized")
+  if(!is.null(attr(predicate, "assertr_vectorized")) &&
+     attr(predicate, "assertr_vectorized")==TRUE)
     return(TRUE)
   return(FALSE)
 }
@@ -80,15 +42,42 @@ apply.predicate.to.vector <- function(a.column, predicate){
 }
 
 
-make.verify.error.message <- function(num.violations){
-  sing.plur <- ifelse(num.violations==1, " failure)", " failures)")
-  paste0(c("verification failed! (", num.violations, sing.plur))
+#' Returns TRUE if data.frame or list has specified names
+#'
+#' This function checks parent frame environment for existence of names.
+#' This is meant to be used with `assertr`'s `verify` function to check
+#' for the existence of specific column names in a `data.frame` that is
+#' piped to `verify`. It can also work on a non-`data.frame` list.
+#'
+#' @param ... A arbitrary amount of quoted names to check for
+#' @return TRUE is all names exist, FALSE if not
+#' @seealso \code{\link{exists}}
+#' @examples
+#'
+#' verify(mtcars, has_all_names("mpg", "wt", "qsec"))
+#'
+#' library(magrittr)   # for pipe operator
+#'
+#' \dontrun{
+#' mtcars %>%
+#'   verify(has_all_names("mpgg"))  # fails
+#' }
+#'
+#' mpgg <- "something"
+#'
+#' mtcars %>%
+#'   verify(exists("mpgg"))   # passes but big mistake
+#'
+#' \dontrun{
+#' mtcars %>%
+#'   verify(has_all_names("mpgg")) # correctly fails
+#' }
+#'
+#' @export
+has_all_names <- function(...){
+  check_this <- list(...)
+  parent <- parent.frame()
+  all(unlist(lapply(check_this, function(x){
+    exists(x, where=parent, inherits=FALSE)
+  })))
 }
-
-
-## assertr stop
-# stop() with call.=FALSE
-assertr_stop <- function(message){
-  stop(message, call.=FALSE)
-}
-

@@ -4,18 +4,24 @@
 \alias{verify}
 \title{Raises error if expression is FALSE anywhere}
 \usage{
-verify(data, expr, error_fun = stop)
+verify(data, expr, success_fun = success_continue, error_fun = error_stop)
 }
 \arguments{
 \item{data}{A data frame, list, or environment}
 
 \item{expr}{A logical expression}
 
-\item{error_fun}{Function to call if assertion fails. Takes one error
-string. Uses \code{stop} by default}
+\item{success_fun}{Function to call if assertion passes. Defaults to
+returning \code{data}.}
+
+\item{error_fun}{Function to call if assertion fails. Defaults to printing
+a summary of all errors.}
 }
 \value{
-data if verification passes. error if not.
+By default, the \code{data} is returned if predicate assertion
+        is TRUE and and error is thrown if not. If a non-default
+        \code{success_fun} or \code{error_fun} is used, the return
+        values of these function will be returned.
 }
 \description{
 Meant for use in a data analysis pipeline, this function will
@@ -23,6 +29,10 @@ just return the data it's supplied if all the logicals in the
 expression supplied are TRUE. If at least one is FALSE, this
 function will raise a error, effectively terminating the pipeline
 early
+}
+\details{
+For examples of possible choices for the \code{success_fun} and
+\code{error_fun} parameters, run \code{help("success_and_error_functions")}
 }
 \note{
 See \code{vignette("assertr")} for how to use this in context
@@ -60,4 +70,3 @@ alist \%>\%
 \seealso{
 \code{\link{assert}} \code{\link{insist}}
 }
-
