@@ -3,7 +3,7 @@ assertr
 
 ![assertr logo](http://statethatiamin.onlythisrose.com/assertrlogo.png)
 
-[![Build Status](https://travis-ci.org/ropensci/assertr.svg?branch=master)](https://travis-ci.org/ropensci/assertr)
+[![Build Status](http://travis-ci.org/ropensci/assertr.svg?branch=master)](https://travis-ci.org/ropensci/assertr)
 [![](http://www.r-pkg.org/badges/version/assertr)](https://cran.r-project.org/package=assertr)
 [![CRAN RStudio mirror downloads](http://cranlogs.r-pkg.org/badges/assertr)](https://cran.r-project.org/package=assertr)
 
@@ -159,4 +159,4 @@ For more info, check out the `assertr` vignette
 ```
 Or [read it here](https://CRAN.R-project.org/package=assertr/vignettes/assertr.html)
 
-[![ropensci\_footer](http://ropensci.org/public_images/github_footer.png)](http://ropensci.org)
+This is an ROpenSci package!
