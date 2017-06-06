@@ -1,4 +1,4 @@
-fe183422336b44223cb781371977dbbc *DESCRIPTION
+62c235f8e9e7bcd980dbfbee02765a2a *DESCRIPTION
 773b7ec3c322674a4338017fd6adec6d *LICENSE
 0e058cec0b3745a2f027d24255e780d9 *NAMESPACE
 ac77300f6c83df23770e897908761677 *NEWS
@@ -8,11 +8,11 @@ e60d3c0dcb714c206996bb1ae1fceafc *R/errors.R
 a907012aa540d6ff7d44e178d9f152d4 *R/predicates.R
 de685f4b163bd33f44e89d7fe9248733 *R/row-redux.R
 6cac68c3018008dee3ede970a835c68b *R/utils.R
-4dc928488f8ec0b5ed624920cac80422 *README.md
+256d17fb5b21422b029ae29785ab8a75 *README.md
 4a172db6226dae5727970c703713747e *build/vignette.rds
 5393f5c39170c96821dfb50c8a6e968d *inst/doc/assertr.R
 c66f81a4adb330656c592b9207bb806d *inst/doc/assertr.Rmd
-907dc85a55bcb70ab82e468fa730aa73 *inst/doc/assertr.html
+2758b27ec4171b6c0c02ae0df4c3b572 *inst/doc/assertr.html
 2084c60ba8ea5e274db33442261ed16c *man/assert.Rd
 bbf8c255545e32362035773e6db7503b *man/assert_rows.Rd
 2ae8dcbb862faa21099a4288bdf96dd8 *man/assertr.Rd
@@ -36,7 +36,7 @@ fd52fb8be3f2c6bc4e799f4618a8a86a *man/summary.assertr_verify_error.Rd
 02e0e7846e7e4020860ff54e9644f053 *man/within_n_mads.Rd
 805d653e6ef5c48f877e5d105f0d8db0 *man/within_n_sds.Rd
 b398788a2ca6f7c24147a5c61f4247da *tests/testthat.R
-2ebaf4027c0bb2c388094f013965ceec *tests/testthat/test-assertions.R
+60fecc051231ec415ffe85aba68eebb8 *tests/testthat/test-assertions.R
 d467659e15fd1a15c3ec80b493c02315 *tests/testthat/test-predicates.R
 2df33e9b085f138ebc77581c5f76ee2a *tests/testthat/test-row-redux.R
 c66f81a4adb330656c592b9207bb806d *vignettes/assertr.Rmd
