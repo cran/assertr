@@ -141,7 +141,7 @@ dat %>%
 ```
 
 This is a powerful advantage over `assert`... but `assert` has one more
-advantage of its own that we heretofore ignored.
+advantage of its own that we've heretofore ignored.
 
 ### assertr's predicates
 
@@ -352,7 +352,7 @@ There's no way of catching this anomaly by looking at each individual
 column separately; the only way to catch it is to view each row as a complete
 observation and compare it to the rest.
 
-To this end, `assertr` provides two functions that take a data frame, and
+To this end, `assertr` provides three functions that take a data frame, and
 reduce each row into a single value. We'll call them *row reduction functions*.
 
 The first one we'll look at is called `maha_dist`. It computes the average
@@ -395,7 +395,10 @@ we used the `everything()` selection function from the `dplyr` package.)
 Then, `within_n_mads(3)` computes on that vector and returns a bounds
 checking predicate. The bounds checking predicate checks to see that all
 mahalanobis distances are within 3 median absolute deviations
-of each other. They are not, and the pipeline errors out.
+of each other. They are not, and the pipeline errors out. Note that the
+`data.frame` of errors that is returned by error report contains the
+verb used (`insist_rows`), the row reduction function, the predicate,
+the column (or columns), the index of the failure and the offendind datum.
 
 This is probably the most powerful construct in `assertr`--it can find a whole
 lot of nasty errors that would be very difficult to check for by hand.
@@ -740,29 +743,9 @@ Super!
 
 ### advanced: programming with assertion functions
 
-The assertion functions we have been using so far have been using non-standard
-evaluation (we haven't been quoting the column names, for example).
-Though very very nice in most cases, non-standard evaluation causes issues when
-trying to programmatically use assertion functions. Let's say you want to check
-the z-scores of a column from `mtcars` of the user's choice; you ask the user
-for a column and store that in a variable. If you try to use that variable in
-an `insist` (or `assert`, etc...) you'll get an error
-
-
-```{r error=TRUE,  purl = FALSE}
-# a.column <- readline("Enter a column name: ")
-# pretend user said "vs"
-a.column <- "vs"
-insist(mtcars, within_n_sds(3), a.column)
-```
-
-Good thing all of `assertr`'s assertion verbs have standard evaluation
-counterparts! All you have to do to use them is put an underscore ("_") at
-the end of the function name...
-
-```{r error=TRUE,  purl = FALSE}
-insist_(mtcars, within_n_sds(3), a.column) %>%
-  head(n=2)
-```
-
-Nifty!
+These assertion functions use the [tidyeval](https://rpubs.com/hadley/dplyr-programming) framework.  In the past,
+programming in a tidyverse-like setting was accomplished through
+standard evaluation versions of verbs, which used functions postfixed
+with an underscore: `insist_` instead of `insist`, for example.  However,
+when tidyeval was made popular with `dplyr` 0.7.0, this usage became deprecated,
+and therefore underscore-postfixed functions are no longer part of `assertr`.

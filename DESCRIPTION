@@ -1,10 +1,10 @@
 Package: assertr
 Type: Package
 Title: Assertive Programming for R Analysis Pipelines
-Version: 2.0.2.2
-Authors@R: person("Tony", "Fischetti", email="tony.fischetti@gmail.com",
-  role = c("aut", "cre"))
-Maintainer: Tony Fischetti <tony.fischetti@gmail.com>
+Version: 2.5
+Authors@R: person("Tony", "Fischetti",
+              email="tony.fischetti@gmail.com",
+              role = c("aut", "cre"))
 Description: Provides functionality to assert conditions
     that have to be met so that errors in data used in
     analysis pipelines can fail quickly. Similar to
@@ -13,13 +13,16 @@ Description: Provides functionality to assert conditions
 URL: https://github.com/ropensci/assertr
 BugReports: https://github.com/ropensci/assertr/issues
 License: MIT + file LICENSE
+ByteCompile: TRUE
 LazyData: TRUE
-Imports: dplyr, MASS, lazyeval, stats, utils
+Imports: dplyr (>= 0.7.0), MASS, lazyeval, stats, utils, rlang (>=
+        0.1.2)
 Suggests: knitr, testthat, magrittr
 VignetteBuilder: knitr
 RoxygenNote: 6.0.1
 NeedsCompilation: no
-Packaged: 2017-06-05 17:31:06 UTC; tonyfischetti
+Packaged: 2018-02-23 21:26:36 UTC; tonyfischetti
 Author: Tony Fischetti [aut, cre]
+Maintainer: Tony Fischetti <tony.fischetti@gmail.com>
 Repository: CRAN
-Date/Publication: 2017-06-06 15:14:04 UTC
+Date/Publication: 2018-02-23 22:36:42 UTC
