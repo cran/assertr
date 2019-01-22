@@ -75,5 +75,7 @@ apply.predicate.to.vector <- function(a.column, predicate){
 has_all_names <- function(...){
   check_this <- list(...)
   parent <- parent.frame()
-  all(vapply(check_this, function(x) exists(x, where=parent, inherits=FALSE), logical(1)))
+  given_names <- rlang::env_names(parent$.top_env)
+  given_names <- given_names[given_names != ".data"]
+  all(check_this %in% given_names)
 }

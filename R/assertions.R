@@ -57,8 +57,8 @@
 assert <- function(data, predicate, ..., success_fun=success_continue,
                       error_fun=error_stop){
   keeper.vars <- dplyr::quos(...)
-  sub.frame <- dplyr::select(data, rlang::UQS(keeper.vars))
-  name.of.predicate <- lazyeval::expr_text(predicate)
+  sub.frame <- dplyr::select(data, !!!(keeper.vars))
+  name.of.predicate <- rlang::expr_text(rlang::enexpr(predicate))
   if(!is.null(attr(predicate, "call"))){
     name.of.predicate <- attr(predicate, "call")
   }
@@ -171,9 +171,9 @@ assert_rows <- function(data, row_reduction_fn, predicate, ...,
                          success_fun=success_continue,
                          error_fun=error_stop){
   keeper.vars <- dplyr::quos(...)
-  sub.frame <- dplyr::select(data, rlang::UQS(keeper.vars))
-  name.of.row.redux.fn <- lazyeval::expr_text(row_reduction_fn)
-  name.of.predicate <- lazyeval::expr_text(predicate)
+  sub.frame <- dplyr::select(data, !!!(keeper.vars))
+  name.of.row.redux.fn <- rlang::expr_text(rlang::enexpr(row_reduction_fn))
+  name.of.predicate <- rlang::expr_text(rlang::enexpr(predicate))
   if(!is.null(attr(row_reduction_fn, "call"))){
     name.of.row.redux.fn <- attr(row_reduction_fn, "call")
   }
@@ -227,7 +227,8 @@ assert_rows <- function(data, row_reduction_fn, predicate, ...,
 
 
 
-#' Raises error if dynamically created predicate is FALSE in any columns selected
+#' Raises error if dynamically created predicate is FALSE in any columns
+#' selected
 #'
 #' Meant for use in a data analysis pipeline, this function applies a predicate
 #' generating function to each of the columns indicated. It will then use these
@@ -283,8 +284,9 @@ insist <- function(data, predicate_generator, ...,
                     success_fun=success_continue,
                     error_fun=error_stop){
   keeper.vars <- dplyr::quos(...)
-  sub.frame <- dplyr::select(data, rlang::UQS(keeper.vars))
-  name.of.predicate.generator <- lazyeval::expr_text(predicate_generator)
+  sub.frame <- dplyr::select(data, !!!(keeper.vars))
+  name.of.predicate.generator <- rlang::expr_text(
+      rlang::enexpr(predicate_generator))
   if(!is.null(attr(predicate_generator, "call"))){
     name.of.predicate.generator <- attr(predicate_generator, "call")
   }
@@ -402,9 +404,10 @@ insist_rows <- function(data, row_reduction_fn, predicate_generator, ...,
                          success_fun=success_continue,
                          error_fun=error_stop){
   keeper.vars <- dplyr::quos(...)
-  sub.frame <- dplyr::select(data, rlang::UQS(keeper.vars))
-  name.of.row.redux.fn <- lazyeval::expr_text(row_reduction_fn)
-  name.of.predicate.generator <- lazyeval::expr_text(predicate_generator)
+  sub.frame <- dplyr::select(data, !!!(keeper.vars))
+  name.of.row.redux.fn <- rlang::expr_text(rlang::enexpr(row_reduction_fn))
+  name.of.predicate.generator <- rlang::expr_text(
+      rlang::enexpr(predicate_generator))
   if(!is.null(attr(row_reduction_fn, "call"))){
     name.of.row.redux.fn <- attr(row_reduction_fn, "call")
   }
@@ -514,24 +517,29 @@ insist_rows <- function(data, row_reduction_fn, predicate_generator, ...,
 #' @export
 verify <- function(data, expr, success_fun=success_continue,
                    error_fun=error_stop){
-  expr <- substitute(expr)
-  # conform to terminology from subset
-  envir <- data
-  enclos <- parent.frame()
-  logical.results <- eval(expr, envir, enclos)
+  expr <- rlang::enexpr(expr)
+  # Use eval_tidy here to get the .data pronoun and all the eval_tidy benefits
+  logical.results <- rlang::eval_tidy(expr, data, parent.frame())
   # NAs are very likely errors, and cause problems in the all() below.
   logical.results <- ifelse(is.na(logical.results), FALSE, logical.results)
+
+  if (!is.logical(logical.results)) {
+    warning("The result of evaluating '", deparse(expr),
+      "' is not a logical vector")
+  }
+  if (length(logical.results) == 0) {
+    warning("The result of evaluating '", deparse(expr),
+      "' has length zero")
+  }
 
   success_fun_override <- attr(data, "assertr_in_chain_success_fun_override")
   if(!is.null(success_fun_override)){
     if(!identical(success_fun, success_fun_override))
-      # warning("user defined success_fun overridden by assertr chain")
     success_fun <- success_fun_override
   }
   error_fun_override <- attr(data, "assertr_in_chain_error_fun_override")
   if(!is.null(error_fun_override)){
     if(!identical(error_fun, error_fun_override))
-      # warning("user defined error_fun overriden by assertr chain")
     error_fun <- error_fun_override
   }
 
@@ -545,4 +553,3 @@ verify <- function(data, expr, success_fun=success_continue,
                                      (1:length(logical.results))[!logical.results])
   error_fun(list(error), data=data)
 }
-
