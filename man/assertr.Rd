@@ -3,16 +3,14 @@
 \docType{package}
 \name{assertr}
 \alias{assertr}
-\alias{assertr-package}
 \title{assertr: Assertive programming for R analysis pipeline.}
 \description{
 The assertr package supplies a suite of functions designed to verify
 assumptions about data early in an analysis pipeline.
-}
-\details{
 See the assertr vignette or the documentation for more information \cr
 > \code{vignette("assertr")}
-
+}
+\details{
 You may also want to read the documentation for the functions that
 \code{assertr} provides:
 \itemize{
