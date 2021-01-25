@@ -1,8 +1,6 @@
 # assertr 2.7
 
-* added "inverse" option to predicates
-
-* bugs due to changes in r-devel and package dependencies fixed
+* `assert()`: remove dead code (closes #103)
 
 # assertr 2.6
 
