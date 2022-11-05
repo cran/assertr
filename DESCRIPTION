@@ -1,7 +1,7 @@
 Package: assertr
 Type: Package
 Title: Assertive Programming for R Analysis Pipelines
-Version: 2.8
+Version: 3.0.0
 Authors@R: person("Tony", "Fischetti",
               email="tony.fischetti@gmail.com",
               role = c("aut", "cre"))
@@ -15,16 +15,16 @@ URL: https://docs.ropensci.org/assertr/ (website)
 BugReports: https://github.com/ropensci/assertr/issues
 License: MIT + file LICENSE
 ByteCompile: TRUE
-LazyData: TRUE
 Depends: R (>= 3.1.0)
-Imports: dplyr (>= 0.7.0), MASS, stats, utils, rlang (>= 0.3.0)
-Suggests: knitr, testthat, magrittr, rmarkdown
+Imports: dplyr (>= 0.7.0), MASS, methods, stats, utils, rlang (>=
+        0.3.0)
+Suggests: knitr, testthat, magrittr, rmarkdown, tibble, plyr
 VignetteBuilder: knitr
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.1
 Encoding: UTF-8
 NeedsCompilation: no
-Packaged: 2021-01-25 01:39:50 UTC; tony
+Packaged: 2022-11-05 22:49:05 UTC; tony
 Author: Tony Fischetti [aut, cre]
 Maintainer: Tony Fischetti <tony.fischetti@gmail.com>
 Repository: CRAN
-Date/Publication: 2021-01-25 05:50:18 UTC
+Date/Publication: 2022-11-05 23:10:02 UTC

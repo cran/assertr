@@ -101,24 +101,42 @@ assert <- function(data, predicate, ..., success_fun=success_continue,
 
   sub.frame <- dplyr::select(data, !!!(keeper.vars))
 
+  is_successful <- tryCatch(
+    expr = {
+      res <- predicate(sub.frame)
+      length(res) == 1 && isTRUE(res)
+    },
+    error = function(e){FALSE},
+    warning = function(w){FALSE}
+  )
+
+  if(is_successful){
+    return(success_fun(data, "assert", name.of.predicate, colnames(sub.frame), NA, description))
+  }
+
   log.mat <- sapply(colnames(sub.frame),
                     function(column){
                       this.vector <- sub.frame[[column]]
                       return(apply.predicate.to.vector(this.vector,
                                                        predicate))})
+  # special case for a single row data.frame
+  if(length(log.mat)==1 && !methods::is(log.mat, "matrix")){
+    tmp <- names(log.mat)
+    log.mat <- matrix(data=log.mat)
+    colnames(log.mat) <- tmp
+  }
 
   # if all checks pass in current assertion
   if(all(log.mat))
     return(success_fun(data, "assert", name.of.predicate, colnames(log.mat), NA, description))
 
-  # if errors occured and verification was obligatory
+  # if errors occurred and verification was obligatory
   if(obligatory)
     attr(data, "assertr_data_defective") <- TRUE
 
   assertion.id <- generate_id()
-  #print(names(log.mat))
+
   errors <- lapply(colnames(log.mat), function(col.name){
-  #errors <- lapply(names(log.mat), function(col.name){
     col <- log.mat[, col.name]
     num.violations <- sum(!col)
     if(num.violations==0)
@@ -388,6 +406,13 @@ insist <- function(data, predicate_generator, ...,
                       predicate <- true.predicates[[column]]
                       return(apply.predicate.to.vector(this.vector,
                                                        predicate))})
+
+  # special case for a single row data.frame
+  if(length(log.mat)==1 && !methods::is(log.mat, "matrix")){
+    tmp <- names(log.mat)
+    log.mat <- matrix(data=log.mat)
+    colnames(log.mat) <- tmp
+  }
 
   # if all checks pass in current assertion
   if(all(log.mat))
