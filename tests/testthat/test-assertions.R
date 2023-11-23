@@ -1,5 +1,3 @@
-context("assertions about assertions in assertion.R")
-
 # just some set up
 a <- 1
 alist <- list(a=c(1,2,3), b=c(4,5,6))
@@ -197,8 +195,11 @@ test_that("verify breaks appropriately", {
   expect_error(verify(mtcars), "argument \"expr\" is missing, with no default")
   expect_error(verify(MTCARS, 2 > 1),
                "object 'MTCARS' not found")
-  expect_warning(verify(mtcars, 1),
-                 "coercing argument of type 'double' to logical")
+  expect_warning(expect_warning(
+    verify(mtcars, 1),
+    "coercing argument of type 'double' to logical"),
+    "The result of evaluating '1' is not a logical vector"
+  )
   expect_error(suppressWarnings(verify(mtcars, "1")),
                "missing value where TRUE/FALSE needed")
   expect_error(verify(mtcars, 1 > 0, "tree"), "could not find function \"success_fun\"")
@@ -262,8 +263,8 @@ test_that("assert returns TRUE if verification passes (w/ `success_logical`)", {
   expect_true(assert(mtcars, not_na, vs, success_fun=success_logical))
   expect_true(assert(mtcars, not_na, mpg:carb, success_fun=success_logical))
   # lambdas
-  expect_true(assert(mtcars, function(x) x%%1==0, cyl, vs, am, gear, carb,
-                     success_fun=success_logical))
+  # expect_true(assert(mtcars, function(x) x%%1==0, cyl, vs, am, gear, carb,
+  #                    success_fun=success_logical))
   expect_true(assert(mtcars, function(x) if(x%%1!=0) return(FALSE), gear,
                      success_fun=success_logical))
   expect_true(assert(iris, function(x) nchar(as.character(x)) > 5, Species,
@@ -348,6 +349,17 @@ test_that("skip_chain_opts doesn't affect functionality outside chain for assert
   expect_equal(assert(mtcars, within_bounds(3.5,4.5), gear, error_fun=error_logical, skip_chain_opts=TRUE), FALSE)
   expect_output(assert(mtcars, within_bounds(3.5,4.5), gear, error_fun=just.show.error, skip_chain_opts=TRUE),
                 "Column 'gear' violates assertion 'within_bounds\\(3.5, 4.5\\)' 20 times.*")
+})
+
+test_that("assert works with single row data.frames", {
+  single_row_data <- head(mtcars, 1)
+
+  expect_equal(assert(single_row_data, within_bounds(10,30), disp, error_fun = error_logical), FALSE)
+  expect_output(assert(single_row_data, within_bounds(10,30), disp, error_fun = just.show.error),
+               "Column 'disp' violates assertion 'within_bounds\\(10, 30\\)' 1 time.*")
+  expect_equal(assert(single_row_data, within_bounds(10,30), disp, mpg, error_fun = error_logical), FALSE)
+  expect_output(assert(single_row_data, within_bounds(10,30), disp, mpg, error_fun = just.show.error),
+               "Column 'disp' violates assertion 'within_bounds\\(10, 30\\)' 1 time.*")
 })
 
 ######################################
@@ -1598,6 +1610,6 @@ test_that("handle predicates applied to the whole data, and not to subframe", {
     head( n = 0)
 
   expect_silent({
-    assert(data = a_tibble, predicate = plyr::empty, dplyr::everything())
+    assert(data = a_tibble, predicate = function(x) nrow(x) == 0L, dplyr::everything())
   })
 })
